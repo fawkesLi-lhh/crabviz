@@ -1,7 +1,8 @@
 use {
     super::GraphGenerator,
-    crate::types::lsp::{
-        CallHierarchyIncomingCall, CallHierarchyOutgoingCall, DocumentSymbol, Location, Position,
+    crate::types::{
+        graph::GlobalPosition,
+        lsp::{CallHierarchyIncomingCall, CallHierarchyOutgoingCall, DocumentSymbol, Location, Position},
     },
     std::cell::RefCell,
     wasm_bindgen::prelude::*,
@@ -87,5 +88,99 @@ impl GraphGeneratorWasm {
 
     pub fn gen_graph(&self) -> JsValue {
         serde_wasm_bindgen::to_value(&self.inner.borrow().gen_graph()).unwrap()
+    }
+
+    pub fn filter_descendants(&self, payload: JsValue) -> JsValue {
+        log(format!(
+            "filter_descendants raw={}",
+            payload.as_string().unwrap_or_else(|| "<non-string payload>".to_string())
+        ));
+        #[derive(serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct FilterPayload {
+            graph: crate::types::graph::Graph,
+            selected: Vec<GlobalPosition>,
+        }
+
+        let payload = match payload.as_string() {
+            Some(value) => match serde_json::from_str::<FilterPayload>(&value) {
+                Ok(payload) => payload,
+                Err(err) => {
+                    log(format!("filter_descendants deserialize error: {err} {value}"));
+                    return JsValue::from_str(&format!("deserialize error FilterPayload: {err} {value}"));
+                }
+            },
+            None => {
+                log("filter_descendants deserialize error: payload is not string".to_string());
+                return JsValue::from_str("deserialize error: payload is not string");
+            }
+        };
+
+        log(format!(
+            "filter_descendants rust in files={} relations={} selected={:?}",
+            payload.graph.files.len(),
+            payload.graph.relations.len(),
+            payload.selected
+        ));
+        let filtered = payload.graph.filter_descendants(&payload.selected);
+        log(format!(
+            "filter_descendants rust out files={} relations={}",
+            filtered.files.len(),
+            filtered.relations.len()
+        ));
+        match serde_json::to_string(&filtered) {
+            Ok(value) => JsValue::from_str(&value),
+            Err(err) => {
+                log(format!("filter_descendants serialize error: {err}"));
+                JsValue::NULL
+            }
+        }
+    }
+
+    pub fn filter_ancestors(&self, payload: JsValue) -> JsValue {
+        log(format!(
+            "filter_ancestors raw={}",
+            payload.as_string().unwrap_or_else(|| "<non-string payload>".to_string())
+        ));
+        #[derive(serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct FilterPayload {
+            graph: crate::types::graph::Graph,
+            selected: Vec<GlobalPosition>,
+        }
+
+        let payload = match payload.as_string() {
+            Some(value) => match serde_json::from_str::<FilterPayload>(&value) {
+                Ok(payload) => payload,
+                Err(err) => {
+                    log(format!("filter_ancestors deserialize error: {err} {value}"));
+                    return JsValue::from_str(&format!("deserialize error FilterPayload: {err} {value}"));
+                }
+            },
+            None => {
+                log("filter_ancestors deserialize error: payload is not string".to_string());
+                return JsValue::from_str("deserialize error: payload is not string");
+            }
+        };
+
+        log(format!(
+            "filter_ancestors rust in files={} relations={} selected={:?}",
+            payload.graph.files.len(),
+            payload.graph.relations.len(),
+            payload.selected
+        ));
+        let filtered = payload.graph.filter_ancestors(&payload.selected);
+        log(format!(
+            "filter_ancestors rust out files={} relations={}",
+            filtered.files.len(),
+            filtered.relations.len()
+        ));
+        match serde_json::to_string(&filtered) {
+            Ok(value) => JsValue::from_str(&value),
+            Err(err) => {
+                log(format!("filter_ancestors serialize error: {err}"));
+                JsValue::NULL
+            }
+        }
     }
 }

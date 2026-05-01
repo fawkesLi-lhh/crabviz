@@ -1,5 +1,5 @@
-mod generator;
-mod lang;
-mod types;
+pub mod generator;
+pub mod lang;
+pub mod types;
 
 pub use generator::GraphGenerator;

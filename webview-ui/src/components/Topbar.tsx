@@ -40,7 +40,13 @@ const Topbar: Component<{ focus: boolean }> = (props) => {
           onClick={() => setScaleOpt(ScaleOption.ZoomOut)}
           innerHTML={svgMinus}
         ></button>
-        <button class="button" onClick={() => setScaleOpt(ScaleOption.Reset)}>
+        <button
+          class="button"
+          onClick={() => {
+            setScaleOpt(ScaleOption.Reset);
+            window.postMessage({ command: 'reset graph' });
+          }}
+        >
           Reset
         </button>
         <button

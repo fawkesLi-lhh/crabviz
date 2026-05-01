@@ -19,6 +19,8 @@ import "./ComboBox.css";
 import svgSearch from "../assets/search.svg?raw";
 import svgGoto from "../assets/goto.svg?raw";
 import svgSelect from "../assets/select.svg?raw";
+const filterDescendantsIcon = '^';
+const filterAncestorsIcon = 'V';
 
 interface IOption {
   id: string;
@@ -29,6 +31,34 @@ interface IOption {
 
 export default function ComboBox() {
   const [{ items, selectedElem }, { setSelectedElem }] = useAppContext();
+
+  const filterGraph = (command: "filter descendants" | "filter ancestors") => {
+    const elem = selectedElem();
+    if (!elem || !items()) {
+      return;
+    }
+
+    const classes = elem.classList;
+    let file_id: string;
+    let ln = 0;
+    let col = 0;
+
+    if (classes.contains("node")) {
+      file_id = elem.id;
+    } else {
+      const parts = elem.id.split(":");
+      file_id = parts[0];
+      [ln, col] = parts[1].split("_").map((s) => parseInt(s));
+    }
+
+    window.postMessage({
+      source: "webview-ui",
+      command,
+      path: items()!.files.get(file_id)!.dataset.path,
+      ln,
+      col,
+    });
+  };
 
   const [value, setValue] = createSignal("");
   const [isSearching, setIsSearching] = createSignal(false);
@@ -96,6 +126,20 @@ export default function ComboBox() {
                     innerHTML={svgSearch}
                   ></button>
                   <Option option={elem2option(selectedElem()!)} />
+                  <button
+                    class="button"
+                    onClick={() => filterGraph("filter descendants")}
+                    title="find descendants"
+                  >
+                    {filterDescendantsIcon}
+                  </button>
+                  <button
+                    class="button"
+                    onClick={() => filterGraph("filter ancestors")}
+                    title="find ancestors"
+                  >
+                    {filterAncestorsIcon}
+                  </button>
                   <button
                     class="button"
                     onClick={jump}

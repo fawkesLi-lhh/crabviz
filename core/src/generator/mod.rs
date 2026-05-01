@@ -206,6 +206,16 @@ impl GraphGenerator {
         }
     }
 
+    pub fn filter_descendants(&self, selected: Vec<GlobalPosition>) -> Graph {
+        let graph = self.gen_graph();
+        graph.filter_descendants(&selected)
+    }
+
+    pub fn filter_ancestors(&self, selected: Vec<GlobalPosition>) -> Graph {
+        let graph = self.gen_graph();
+        graph.filter_ancestors(&selected)
+    }
+
     fn collect_files_and_symbols(&self) -> (Vec<File>, HashSet<GlobalPosition>) {
         let mut all_symbols = HashSet::new();
         let files = self

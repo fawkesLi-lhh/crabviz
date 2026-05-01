@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { GlobalPosition } from './generator';
+import { GraphGenerator } from '../out/crabviz';
 
 export class CallGraphPanel {
 	public static readonly viewType = 'crabviz.callgraph';
@@ -10,10 +11,18 @@ export class CallGraphPanel {
 
 	private readonly _panel: vscode.WebviewPanel;
 	private readonly _extensionUri: vscode.Uri;
+	private readonly _output: vscode.OutputChannel;
+	private readonly _debug = true;
 	private _disposables: vscode.Disposable[] = [];
+	private _graph: any | null = null;
+	private _originalGraph: any | null = null;
+	private _root: string = '';
+	private _focus: GlobalPosition | null = null;
+	private readonly _generator = new GraphGenerator("", false);
 
 	public constructor(extensionUri: vscode.Uri) {
 		this._extensionUri = extensionUri;
+		this._output = vscode.window.createOutputChannel('Crabviz');
 
 		const panel = vscode.window.createWebviewPanel(CallGraphPanel.viewType, `Crabviz #${CallGraphPanel.num}`, vscode.ViewColumn.One, {
 			localResourceRoots: [
@@ -28,6 +37,10 @@ export class CallGraphPanel {
 
 		this._panel.webview.onDidReceiveMessage(
 			msg => {
+				this.log(`recv ${JSON.stringify(msg)}`);
+				if (msg.source === 'webview-ui') {
+					this.log('source=webview-ui');
+				}
 				switch (msg.command) {
 					case "save SVG":
 						this.save(msg.svg, "svg");
@@ -45,6 +58,21 @@ export class CallGraphPanel {
 								editor.revealRange(range);
 							});
 						break;
+					case 'filter descendants':
+						this.applyFilter('descendants', msg.path, msg.ln, msg.col);
+						break;
+					case 'filter ancestors':
+						this.applyFilter('ancestors', msg.path, msg.ln, msg.col);
+						break;
+					case 'reset graph':
+						this.resetGraph();
+						break;
+					case 'render graph':
+						this.log('render graph requested');
+						break;
+					default:
+						this.log(`unknown command ${msg.command}`);
+						break;
 				}
 			},
 			null,
@@ -52,7 +80,7 @@ export class CallGraphPanel {
 		);
 
 		this._panel.onDidChangeViewState(
-			e => {
+			() => {
 				if (panel.active) {
 					CallGraphPanel.currentPanel = this;
 				} else if (CallGraphPanel.currentPanel !== this) {
@@ -85,14 +113,21 @@ export class CallGraphPanel {
 
 	public showCallGraph(graph: any, root: string, focus: GlobalPosition | null = null) {
 		CallGraphPanel.currentPanel = this;
+		this._graph = graph;
+		this._originalGraph = graph;
+		this._root = root;
+		this._focus = focus;
+		this._panel.webview.html = this.makeHtml(graph, root, focus);
+	}
 
+	private makeHtml(graph: any, root: string, focus: GlobalPosition | null) {
 		const nonce = getNonce();
 		const webview = this._panel.webview;
 		const assetsUri = vscode.Uri.joinPath(this._extensionUri, 'out', 'webview-ui');
 		const cssUri = vscode.Uri.joinPath(assetsUri, "index.css");
 		const jsUri = vscode.Uri.joinPath(assetsUri, "index.js");
 
-		this._panel.webview.html = `
+		return `
 			<!DOCTYPE html>
 			<html lang="en">
 			<head>
@@ -122,6 +157,65 @@ export class CallGraphPanel {
 			</body>
 			</html>
 		`;
+	}
+
+	private applyFilter(direction: 'descendants' | 'ancestors', path: string, ln: number, col: number) {
+		this.log(`applyFilter direction=${direction} path=${path} ln=${ln} col=${col}`);
+		if (!this._graph) {
+			this.log('no graph loaded');
+			return;
+		}
+
+		const fileId = this.findFileId(path);
+		this.log(`resolved fileId=${fileId}`);
+		const selected = [{ fileId, line: ln, character: col }];
+		this.log(`selected payload=${JSON.stringify(selected)}`);
+		this.log(`before wasm call graph files=${this._graph.files?.length ?? 0} relations=${this._graph.relations?.length ?? 0}`);
+		const payload = JSON.stringify({ graph: this._graph, selected });
+		this.log(`payload to wasm=${payload}`);
+		let filtered;
+		if (direction === 'descendants') {
+			filtered = this._generator.filter_descendants(payload);
+		} else {
+			filtered = this._generator.filter_ancestors(payload);
+		}
+		if (!filtered) {
+			this.log('wasm returned null/undefined');
+			return;
+		}
+		if (typeof filtered === 'string') {
+			this.log(`wasm returned string=${filtered}`);
+			filtered = JSON.parse(filtered);
+		}
+		this.log(`after wasm call graph files=${filtered.files?.length ?? 0} relations=${filtered.relations?.length ?? 0}`);
+
+		this._graph = filtered;
+		this._focus = { path, line: ln, character: col };
+		this.log(`filtered files=${filtered.files?.length ?? 0} relations=${filtered.relations?.length ?? 0}`);
+		this._panel.webview.html = this.makeHtml(filtered, this._root, this._focus);
+	}
+
+	private resetGraph() {
+		if (!this._originalGraph) {
+			this.log('resetGraph: no original graph');
+			return;
+		}
+		this._graph = this._originalGraph;
+		this._focus = null;
+		this.log(`resetGraph files=${this._graph.files?.length ?? 0} relations=${this._graph.relations?.length ?? 0}`);
+		this._panel.webview.html = this.makeHtml(this._graph, this._root, this._focus);
+	}
+
+	private findFileId(path: string): number {
+		const file = this._graph?.files?.find((f: any) => f.path === path);
+		return file?.id ?? 0;
+	}
+
+	private log(message: string) {
+		if (!this._debug) {
+			return;
+		}
+		this._output.appendLine(`[Crabviz] ${message}`);
 	}
 
   save(content: string, ext: string) {
