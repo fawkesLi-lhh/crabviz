@@ -48,6 +48,9 @@ export class CallGraphPanel {
 					case "save HTML":
 						this.save(msg.html, "html");
 						break;
+					case "save CRBVIZ":
+						this.save(msg.crbviz, "crbviz");
+						break;
 					case 'go to definition':
 						vscode.workspace.openTextDocument(vscode.Uri.file(msg.path))
 							.then(doc => vscode.window.showTextDocument(doc))

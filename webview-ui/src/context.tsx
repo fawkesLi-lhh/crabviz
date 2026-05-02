@@ -8,7 +8,8 @@ export enum ScaleOption {
 
 export enum ExportOption {
   Svg,
-  Html
+  Html,
+  Crbviz,
 }
 
 const makeAppContext = () => {

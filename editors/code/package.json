@@ -2,7 +2,7 @@
   "name": "crabviz",
   "displayName": "Crabviz",
   "description": "interactive call graph generator",
-  "version": "0.5.6",
+  "version": "0.5.1",
   "publisher": "chanhx",
   "author": {
     "name": "Chan HoCheung"
@@ -30,6 +30,10 @@
         "title": "Crabviz: Generate Call Graph"
       },
       {
+        "command": "crabviz.loadCallGraph",
+        "title": "Crabviz: Load Call Graph"
+      },
+      {
         "command": "crabviz.generateFuncCallGraph",
         "title": "Crabviz: Generate Function Call Graph"
       }
@@ -38,6 +42,10 @@
       "commandPalette": [
         {
           "command": "crabviz.generateCallGraph",
+          "when": "never"
+        },
+        {
+          "command": "crabviz.loadCallGraph",
           "when": "never"
         },
         {
@@ -55,6 +63,10 @@
       "explorer/context": [
         {
           "command": "crabviz.generateCallGraph",
+          "group": "crabviz"
+        },
+        {
+          "command": "crabviz.loadCallGraph",
           "group": "crabviz"
         }
       ]

@@ -15,6 +15,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('crabviz.generateCallGraph', manager.generateCallGraph.bind(manager)),
+		vscode.commands.registerCommand('crabviz.loadCallGraph', manager.loadCallGraph.bind(manager)),
 		vscode.commands.registerTextEditorCommand('crabviz.generateFuncCallGraph', manager.generateFuncCallGraph.bind(manager)),
 	);
 }

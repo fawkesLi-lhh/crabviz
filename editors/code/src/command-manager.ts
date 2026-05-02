@@ -8,6 +8,11 @@ import { Generator } from './generator';
 import { CallGraphPanel } from './webview';
 import { getLanguages } from './utils/languages';
 
+async function loadGraphFromUri(uri: vscode.Uri): Promise<any> {
+  const raw = await vscode.workspace.fs.readFile(uri);
+  return JSON.parse(Buffer.from(raw).toString('utf8'));
+}
+
 export class CommandManager {
   private context: vscode.ExtensionContext;
 
@@ -123,6 +128,33 @@ export class CommandManager {
 			const panel = new CallGraphPanel(this.context.extensionUri);
 			panel.showCallGraph(graph, root.uri.path, funcPos);
 		});
+	}
+
+  public async loadCallGraph() {
+		const picked = await vscode.window.showOpenDialog({
+			canSelectMany: false,
+			openLabel: 'Load',
+			filters: {
+				Crabviz: ['crbviz'],
+				JSON: ['json'],
+			},
+		});
+
+		if (!picked || picked.length === 0) {
+			return;
+		}
+
+		const uri = picked[0];
+		let graph;
+		try {
+			graph = await loadGraphFromUri(uri);
+		} catch (error) {
+			vscode.window.showErrorMessage(`Failed to load graph: ${error}`);
+			return;
+		}
+
+		const panel = new CallGraphPanel(this.context.extensionUri);
+		panel.showCallGraph(graph.graph ?? graph, graph.root ?? '', graph.focus ?? null);
 	}
 
 	async readIgnores(root: vscode.WorkspaceFolder): Promise<Ignore> {

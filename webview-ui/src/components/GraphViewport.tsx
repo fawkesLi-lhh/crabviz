@@ -12,7 +12,7 @@ import { Graph } from "../graph/types";
 import { convert } from "../graph/graphviz";
 import { renderSVG } from "../graph/render";
 import { CallGraph } from "../graph/CallGraph";
-import { html, svg } from "../export/templates";
+import { crbviz, html, svg } from "../export/templates";
 
 import Spinner from "./Spinner";
 
@@ -144,6 +144,19 @@ const GraphViewport: Component<{
               window.postMessage({
                 command: "save HTML",
                 html: html(svgContent, width, height, props.focus),
+              });
+              break;
+            case ExportOption.Crbviz:
+              window.postMessage({
+                command: "save CRBVIZ",
+                crbviz: crbviz({
+                  format: "crbviz",
+                  version: 1,
+                  exportedAt: new Date().toISOString(),
+                  graph: props.graph,
+                  root: props.root,
+                  focus: props.focus,
+                }),
               });
               break;
           }

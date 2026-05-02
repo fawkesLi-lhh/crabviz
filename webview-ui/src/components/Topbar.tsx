@@ -77,6 +77,14 @@ const Topbar: Component<{ focus: boolean }> = (props) => {
             >
               SVG
             </div>
+            <div class="option"
+              onClick={() => {
+                setExportOpt(ExportOption.Crbviz);
+                setShowSaveOptions(false);
+              }}
+            >
+              CRBVIZ
+            </div>
           </div>
         </Popover>
       </button>

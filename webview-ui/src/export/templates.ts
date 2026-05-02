@@ -1,6 +1,8 @@
 import cssSvgStyle from "../assets/out/index.css?raw";
 import jsCallGraph from "../assets/out/index.js?raw";
 
+import { Graph } from "../graph/types";
+
 export function svg(svgContent: string, width: number, height: number): string {
   return `
 <svg class="callgraph" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${width} ${height}">
@@ -50,3 +52,16 @@ export function html(
 </body>
 </html>`;
 }
+
+export function crbviz(payload: CrbvizPayload): string {
+  return JSON.stringify(payload, null, 2);
+}
+
+export type CrbvizPayload = {
+  format: "crbviz";
+  version: 1;
+  exportedAt: string;
+  graph: Graph;
+  root: string;
+  focus: string | null;
+};
